@@ -22,6 +22,9 @@ library(splines)
 library(bst)
 library(brnn)
 library(kernlab)
+library(ipred)
+library(nnet)
+
 
 seed<-75647
 metric<-"Accuracy"
@@ -45,19 +48,20 @@ ids<-tstdata$id
 trdata$id<-NULL
 tstdata$id<-NULL
 
+
 PreObj<-preProcess(trdata[,2:193], method = c("nzv", "center", "scale"))
 trntrans<-predict(PreObj, trdata[,2:193])
-training<-as.data.table(cbind(species=trdata$species, trntrans))
+training<-as.data.frame(cbind(species=trdata$species, trntrans))
 testing<-predict(PreObj, tstdata)
 
-training<-data.table(training, keep.rownames = F)
-testing<-data.table(testing, keep.rownames = F)
+training<-data.table(training)
+testing<-data.table(testing)
 
 # Stacked model ensemble
 
 # Set up training control
 
-fitControl<-trainControl(method="repeatedcv", number=10, repeats=3, savePredictions = "final")
+fitControl<-trainControl(method="repeatedcv", number=10, repeats=3, savePredictions = "final", index=createFolds(training$species, 10))
 
 ## initialize for parallel processing
 
@@ -70,21 +74,7 @@ library(foreach)
 
 set.seed(seed)
 
-# m1<-train(species~., data=training, method="xgbTree", metric=metric, trControl=fitControl)
-
-# summary(m1)
-# p1<-predict(m1, training)
-# confusionMatrix(p1, training$species)
-
-# p2<-predict(m1, testing, type="prob")
-
-# p3<-predict(m1, testing)
-
-# sub2<-as.data.frame(cbind(id=ids, p2))
-
-# write.csv(sub1, "C:/Kaggle/Leaves/sub1.csv", row.names=F)
-
-mlist<-c("rf", "svmRadial", "xgbTree", "gbm", "C5.0", "treebag")
+mlist<-c("rf", "svmRadial", "parRF")
 
 models<-caretList(species~., data=training, metric=metric, trControl = fitControl, methodList = mlist)
 
@@ -96,5 +86,22 @@ dotplot(results)
 modelCor(results)
 splom(results)
 
-beep(7)
+# stack rf model
+
+stackrf<-caretStack(models, method="rf", metric=metric, trControl=fitControl)
+print(stackrf)
+
+pred<- predict(stackrf ,training, type='prob')
+logloss1<-MultiLogLoss(y_true = training[,1], y_pred = as.matrix(pred))
+
+logloss1
+
+NB<- naiveBayes(species~., training)
+prednb<- predict(NB, training, type='raw')
+logloss2<-MultiLogLoss(y_true = training[,1], y_pred = as.matrix(prednb))
+
+logloss2
+
+
+
 
