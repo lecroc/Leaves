@@ -25,7 +25,7 @@ library(foreach)
 
 
 seed<-75647
-metric<-"LogLoss"
+metric<-"logLoss"
 
 
 # Get Data
@@ -62,7 +62,7 @@ m1<- naiveBayes(species~., training)
 
 # Set up training control
 
-fitControl<-trainControl(method="repeatedcv", number=10, repeats=3, classProbs=T, summaryFuncion=MultiClassSummary)
+fitControl<-trainControl(method="repeatedcv", number=10, repeats=3, classProbs=T, summaryFunction = multiClassSummary)
 
 ## initialize for parallel processing
 
