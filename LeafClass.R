@@ -24,6 +24,7 @@ library(brnn)
 library(kernlab)
 library(ipred)
 library(nnet)
+library(MLmetrics)
 
 
 seed<-75647
@@ -92,16 +93,18 @@ stackrf<-caretStack(models, method="rf", metric=metric, trControl=fitControl)
 print(stackrf)
 
 pred<- predict(stackrf ,training, type='prob')
-logloss1<-MultiLogLoss(y_true = training[,1], y_pred = as.matrix(pred))
+logloss1<-MultiLogLoss(y_true = training$species, y_pred = as.matrix(pred))
 
 logloss1
 
 NB<- naiveBayes(species~., training)
 prednb<- predict(NB, training, type='raw')
-logloss2<-MultiLogLoss(y_true = training[,1], y_pred = as.matrix(prednb))
+logloss2<-MultiLogLoss(y_true = training$species, y_pred = as.matrix(prednb))
 
 logloss2
 
+NBSub<-predict(NB, testing, type="raw")
 
+NBSub<-as.data.frame(cbind(id=ids, NBSub))
 
-
+write.csv(NBSub, "C:/Kaggle/Leaves/NBSub.csv", row.names = F)
