@@ -62,7 +62,7 @@ m1<- naiveBayes(species~., training)
 
 # Set up training control
 
-fitControl<-trainControl(method="repeatedcv", number=10, repeats=3, classProbs=T, summaryFunction = multiClassSummary)
+fitControl<-trainControl(method="repeatedcv", number=10, repeats=3, classProbs=T, summaryFunction = mnLogLoss)
 
 ## initialize for parallel processing
 
@@ -116,6 +116,9 @@ logloss3
 logloss4
 
 beep(7)
+
+
+
 
 
 
