@@ -2,7 +2,6 @@
 
 library(MASS)
 library(caret)
-library(caretEnsemble)
 library(xgboost)
 library(data.table)
 library(Matrix)
@@ -12,23 +11,21 @@ library(e1071)
 library(DMwR)
 library(mboost)
 library(randomForest)
-library(earth)
 library(rpart)
 library(beepr)
 library(plyr)
 library(gbm)
-library(survival)
-library(splines)
-library(bst)
 library(brnn)
 library(kernlab)
 library(ipred)
 library(nnet)
 library(MLmetrics)
+library(doSNOW)
+library(foreach)
 
 
 seed<-75647
-metric<-"Accuracy"
+metric<-"LogLoss"
 
 
 # Get Data
@@ -58,53 +55,68 @@ testing<-predict(PreObj, tstdata)
 training<-data.table(training)
 testing<-data.table(testing)
 
-# Stacked model ensemble
+#  Naive  Bayes Classifier
+set.seed(seed)
+m1<- naiveBayes(species~., training)
+
 
 # Set up training control
 
-fitControl<-trainControl(method="repeatedcv", number=10, repeats=3, savePredictions = "final", index=createFolds(training$species, 10))
+fitControl<-trainControl(method="repeatedcv", number=10, repeats=3, classProbs=T, summaryFuncion=MultiClassSummary)
 
 ## initialize for parallel processing
 
-library(doSNOW)
 getDoParWorkers()
 registerDoSNOW(makeCluster(19, type="SOCK"))
 getDoParWorkers()
 getDoParName()
-library(foreach)
 
+
+
+## xgbTree
 set.seed(seed)
+m2<-train(species~., data=training, method="xgbTree", trConrtol=fitControl, metric=metric, tuneLength=5)
 
-mlist<-c("rf", "svmRadial", "parRF")
+## Random Forest
+set.seed(seed)
+m3<-train(species~., data=training, method="rf", trConrtol=fitControl, metric=metric, tuneLength=5)
 
-models<-caretList(species~., data=training, metric=metric, trControl = fitControl, methodList = mlist)
+## gbm
+set.seed(seed)
+gbmGrid<-expand.grid(interaction.depth=c(1,5,9), n.trees = (1:30)*50, shrinkage = c(.1, .05, .001), n.minobsinnode=c(6, 8, 10))
+m4<-train(species~., data=training, method="gbm", trConrtol=fitControl, metric=metric, tuneGrid=gbmGrid)
 
-results<-resamples(models)
+## Calculate logloss for each model
 
-summary(results)
-dotplot(results)
+predm1<- predict(m1, training, type='raw')
+logloss1<-MultiLogLoss(y_true = training$species, y_pred = as.matrix(predm1))
 
-modelCor(results)
-splom(results)
+predm2<- predict(m2, training, type='raw')
+logloss2<-MultiLogLoss(y_true = training$species, y_pred = as.matrix(predm2))
 
-# stack rf model
 
-stackrf<-caretStack(models, method="rf", metric=metric, trControl=fitControl)
-print(stackrf)
+predm3<- predict(m3, training, type='raw')
+logloss3<-MultiLogLoss(y_true = training$species, y_pred = as.matrix(predm3))
 
-pred<- predict(stackrf ,training, type='prob')
-logloss1<-MultiLogLoss(y_true = training$species, y_pred = as.matrix(pred))
+predm4<- predict(m4, training, type='raw')
+logloss4<-MultiLogLoss(y_true = training$species, y_pred = as.matrix(predm4))
 
+# Display LogLoss
+
+# Naive Bayes
 logloss1
 
-NB<- naiveBayes(species~., training)
-prednb<- predict(NB, training, type='raw')
-logloss2<-MultiLogLoss(y_true = training$species, y_pred = as.matrix(prednb))
-
+# xgbTree
 logloss2
 
-NBSub<-predict(NB, testing, type="raw")
+# Random Forest
+logloss3
 
-NBSub<-as.data.frame(cbind(id=ids, NBSub))
+# gbm
+logloss4
 
-write.csv(NBSub, "C:/Kaggle/Leaves/NBSub.csv", row.names = F)
+beep(7)
+
+
+
+
