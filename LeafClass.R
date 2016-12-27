@@ -6,7 +6,6 @@ library(xgboost)
 library(data.table)
 library(Matrix)
 library(methods)
-library(vcd)
 library(e1071)
 library(DMwR)
 library(mboost)
@@ -15,17 +14,14 @@ library(rpart)
 library(beepr)
 library(plyr)
 library(gbm)
-library(brnn)
 library(kernlab)
-library(ipred)
-library(nnet)
 library(MLmetrics)
 library(doSNOW)
 library(foreach)
 
 
 seed<-75647
-metric<-"logLoss"
+metric<-"Accuracy"
 
 
 # Get Data
@@ -62,12 +58,12 @@ m1<- naiveBayes(species~., training)
 
 # Set up training control
 
-fitControl<-trainControl(method="repeatedcv", number=10, repeats=3, classProbs=T, summaryFunction = mnLogLoss)
+fitControl<-trainControl(method="repeatedcv", number=4, repeats=3, classProbs=TRUE)
 
 ## initialize for parallel processing
 
 getDoParWorkers()
-registerDoSNOW(makeCluster(19, type="SOCK"))
+registerDoSNOW(makeCluster(30, type="SOCK"))
 getDoParWorkers()
 getDoParName()
 
@@ -76,15 +72,18 @@ getDoParName()
 ## xgbTree
 set.seed(seed)
 m2<-train(species~., data=training, method="xgbTree", trConrtol=fitControl, metric=metric, tuneLength=5)
+beep(7)
 
 ## Random Forest
 set.seed(seed)
 m3<-train(species~., data=training, method="rf", trConrtol=fitControl, metric=metric, tuneLength=5)
+beep(7)
 
 ## gbm
 set.seed(seed)
 gbmGrid<-expand.grid(interaction.depth=c(1,5,9), n.trees = (1:30)*50, shrinkage = c(.1, .05, .001), n.minobsinnode=c(6, 8, 10))
 m4<-train(species~., data=training, method="gbm", trConrtol=fitControl, metric=metric, tuneGrid=gbmGrid)
+beep(8)
 
 ## Calculate logloss for each model
 
