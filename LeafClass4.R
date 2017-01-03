@@ -30,7 +30,7 @@ s1<-"C:/Kaggle/Leaves/Images"
 filenames<-list.files(s1)
 
 img<-load.image("C:/Kaggle/Leaves/Images/1.jpg")
-imgr<-resize(img, 100,,100, 1, 1)
+imgr<-resize(img, 100, 100, 1, 1)
 imblr<-isoblur(imgr, 1)
 plot(imblr)
 
