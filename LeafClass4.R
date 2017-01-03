@@ -25,6 +25,7 @@ seed<-1234
 
 system(command = "C:/Kaggle/Leaves/Images")
 list.files(path = "C:/Kaggle/Leaves/Images")
+setwd("C:/Kaggle/Leaves/Images")
 
 s1<-"C:/Kaggle/Leaves/Images"
 filenames<-list.files(s1)
@@ -36,7 +37,7 @@ plot(imblr)
 
 data<-matrix(nrow=length(filenames), ncol=10000)
 names<-matrix(nrow=length(filenames), ncol=1)
-for (i in 1:length(list.files(s1))) {
+for (i in 1:length(filenames)) {
   img<-load.image(filenames[i])
   imgr<-resize(img, 100, 100, 1, 1)
   imblr<-isoblur(imgr, 1)
