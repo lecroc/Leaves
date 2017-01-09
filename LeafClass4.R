@@ -31,15 +31,15 @@ s1<-"C:/Kaggle/Leaves/Images"
 filenames<-list.files(s1)
 
 img<-load.image("C:/Kaggle/Leaves/Images/1.jpg")
-imgr<-resize(img, 100, 100, 1, 1)
+imgr<-resize(img, 12, 12, 1, 1)
 imblr<-isoblur(imgr, 1)
 plot(imblr)
 
-data<-matrix(nrow=length(filenames), ncol=10000)
+data<-matrix(nrow=length(filenames), ncol=144)
 names<-matrix(nrow=length(filenames), ncol=1)
 for (i in 1:length(filenames)) {
   img<-load.image(filenames[i])
-  imgr<-resize(img, 100, 100, 1, 1)
+  imgr<-resize(img, 12, 12, 1, 1)
   imblr<-isoblur(imgr, 1)
   imblrv<-as.vector(imblr)
   names[i,]<-filenames[i]
@@ -55,7 +55,7 @@ combo$FilNumb<-as.numeric(unique(unlist(regmatches(combo$Filename, temp))))
 
 combo<-combo[order(combo$FilNumb), ]
 
-combo<-combo[,c(10002, 1:10001)]
+combo<-combo[,c(146, 1:145)]
 
 trdata<-read.csv("C:/Kaggle/Leaves/train.csv")
 tstdata<-read.csv("C:/Kaggle/Leaves/test.csv")
@@ -71,13 +71,13 @@ dim(training)
 dim(testing)
 
 training$species<-trdata$species
-training<-training[, 3:10003]
-training<-training[, c(10001, 1:10000)]
+training<-training[, 3:147]
+training<-training[, c(145, 1:144)]
 
-testing<-testing[, 3:10002]
+testing<-testing[, 3:146]
 
-PreObj<-preProcess(training[,2:10001], method = c("nzv", "center", "scale"))
-trntrans<-predict(PreObj, training[,2:10001])
+PreObj<-preProcess(training[,2:145], method = c("nzv", "center", "scale"))
+trntrans<-predict(PreObj, training[,2:145])
 training<-as.data.table(cbind(species=trdata$species, trntrans))
 testing<-predict(PreObj, testing)
 
@@ -94,18 +94,48 @@ getDoParName()
 
 set.seed(seed)
 
-xgbTree <- train(species~., data=training, method="xgbTree", metric="logLoss", trControl=control)
+rf <- train(species~., data=training, method="rf", metric="logLoss", trControl=control, tuneLength=5)
 
-pred<-predict(xgbTree, training)
+pred<-predict(rf, training)
 
 cm<-confusionMatrix(training$species, pred)
 
-testpred<-predict(xgbTree, testing, type="prob")
+testpred<-predict(rf, testing, type="prob")
 
-detailsub<-as.data.frame(cbind(id=ids, testpred))
+rf1sub<-as.data.frame(cbind(id=ids, testpred))
 
-write.csv(detailsub, "C:/Kaggle/Leaves/Leaves/detailsub.csv", row.names = F)
+tp<-testpred^6
 
-save(xgbTree, file="C:/Kaggle/Leaves/Leaves/xgbTree.RData")
+for(x in seq_len(nrow(tp))){
+  tp[x,] <- tp[x,]/sum(tp[x,]) 
+}
+
+# Example of probability for test no 363 before raise by 5th pwoer
+
+tp1<-as.matrix(testpred)
+
+barplot(tp1[363,], 
+        xlab = "probability", 
+        xlim = c(0,1), 
+        horiz = T, 
+        las=1,
+        cex.names=0.3,
+        main = "Before Power 5")
+
+# Example of probability for test no 363 after raise by 5th pwoer
+barplot(tp[363,], 
+        xlab = "probability", 
+        xlim = c(0,1), 
+        horiz = T, 
+        las=1,
+        cex.names=0.3,
+        main = "After Power 5")
+
+rf2sub<-as.data.frame(cbind(id=ids, tp))
+
+write.csv(rf1sub, "C:/Kaggle/Leaves/Leaves/rf1.csv", row.names = F)
+write.csv(rf2sub, "C:/Kaggle/Leaves/Leaves/rf2.csv", row.names = F)
+
+save(rf, file="C:/Kaggle/Leaves/Leaves/rf.RData")
 
 beep(7)
