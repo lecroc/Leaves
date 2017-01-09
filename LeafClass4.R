@@ -85,7 +85,7 @@ training<-data.table(training, keep.rownames = F)
 testing<-data.table(testing, keep.rownames = F)
 
 
-control <- trainControl(method="cv", number=10, classProbs=TRUE, summaryFunction=mnLogLoss)
+control <- trainControl(method="cv", number=5, classProbs=TRUE, summaryFunction=mnLogLoss)
 
 getDoParWorkers()
 registerDoSNOW(makeCluster(7, type="SOCK"))
